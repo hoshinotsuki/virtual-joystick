@@ -20,6 +20,8 @@ from typing import Optional
 import grpc
 from farm_ng.canbus import canbus_pb2
 from farm_ng.canbus.canbus_client import CanbusClient
+from farm_ng.canbus.packet import actuator_bits_cmd
+from farm_ng.canbus.packet import ActuatorCommands
 from farm_ng.canbus.packet import AmigaControlState
 from farm_ng.canbus.packet import AmigaTpdo1
 from farm_ng.canbus.packet import make_amiga_rpdo1_proto
@@ -71,6 +73,9 @@ class VirtualJoystickApp(App):
         self.max_speed: float = 1.0
         self.max_angular_rate: float = 1.0
 
+        # PTO Control
+        self.pto_0_cmd = ActuatorCommands.passive
+
         self.image_decoder = TurboJPEG()
 
         self.async_tasks: List[asyncio.Task] = []
@@ -81,6 +86,12 @@ class VirtualJoystickApp(App):
     def on_exit_btn(self) -> None:
         """Kills the running kivy application."""
         App.get_running_app().stop()
+
+    def set_pto_0(self) -> None:
+        if self.root.ids.pto_0_toggle.state == "down":
+            self.pto_0_cmd = ActuatorCommands.forward
+        else:
+            self.pto_0_cmd = ActuatorCommands.stopped
 
     async def app_func(self):
         async def run_wrapper() -> None:
@@ -285,6 +296,7 @@ class VirtualJoystickApp(App):
                 state_req=AmigaControlState.STATE_AUTO_ACTIVE,
                 cmd_speed=self.max_speed * joystick.joystick_pose.y,
                 cmd_ang_rate=self.max_angular_rate * -joystick.joystick_pose.x,
+                pto_bits=actuator_bits_cmd(a0=self.pto_0_cmd),
             )
             yield canbus_pb2.SendCanbusMessageRequest(message=msg)
             await asyncio.sleep(period)

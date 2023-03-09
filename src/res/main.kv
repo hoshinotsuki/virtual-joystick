@@ -55,7 +55,19 @@ RelativeLayout:
                 text: app.amiga_rate
                 font_size: 18
             Widget:
-                size_hint_y: 2.0
+                size_hint_y: 1.0
+            ToggleButton:
+                size_hint_y: 1.0
+                id: pto_0_toggle
+                text: "Auto PTO 0"
+                font_size: 30
+                on_press: app.set_pto_0()
+            # Switch:
+            #     size_hint_y: 1.0
+            #     id: pto_0_dir
+            #     active: True
+            Widget:
+                size_hint_y: 1.0
         VirtualJoystickWidget:
             id: joystick
         TabbedPanel:
