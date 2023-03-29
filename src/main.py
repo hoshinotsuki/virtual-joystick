@@ -73,8 +73,9 @@ class VirtualJoystickApp(App):
         self.max_speed: float = 1.0
         self.max_angular_rate: float = 1.0
 
-        # PTO Control
+        # Actuator Control
         self.pto_0_cmd = ActuatorCommands.passive
+        self.hbridge_0_cmd = ActuatorCommands.passive
 
         self.image_decoder = TurboJPEG()
 
@@ -92,6 +93,18 @@ class VirtualJoystickApp(App):
             self.pto_0_cmd = ActuatorCommands.forward
         else:
             self.pto_0_cmd = ActuatorCommands.stopped
+
+    def set_hbridge_0(self) -> None:
+        if self.root.ids.hbridge_in.state == "down":
+            self.hbridge_0_cmd = ActuatorCommands.forward
+        elif self.root.ids.hbridge_out.state == "down":
+            self.hbridge_0_cmd = ActuatorCommands.reverse
+        else:
+            self.hbridge_0_cmd = ActuatorCommands.stopped
+
+        self.root.ids.hbridge_in.disabled = self.root.ids.hbridge_in.state == 'down'
+        self.root.ids.hbridge_stop.disabled = self.root.ids.hbridge_stop.state == 'down'
+        self.root.ids.hbridge_out.disabled = self.root.ids.hbridge_out.state == 'down'
 
     async def app_func(self):
         async def run_wrapper() -> None:
@@ -297,6 +310,7 @@ class VirtualJoystickApp(App):
                 cmd_speed=self.max_speed * joystick.joystick_pose.y,
                 cmd_ang_rate=self.max_angular_rate * -joystick.joystick_pose.x,
                 pto_bits=actuator_bits_cmd(a0=self.pto_0_cmd),
+                hbridge_bits=actuator_bits_cmd(a0=self.hbridge_0_cmd),
             )
             yield canbus_pb2.SendCanbusMessageRequest(message=msg)
             await asyncio.sleep(period)
