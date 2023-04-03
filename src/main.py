@@ -30,6 +30,7 @@ from farm_ng.service import service_pb2
 from farm_ng.service.service_client import ClientConfig
 from turbojpeg import TurboJPEG
 from virtual_joystick.joystick import VirtualJoystickWidget
+from virtual_joystick.utils import Timer
 
 # Must come before kivy imports
 os.environ["KIVY_NO_ARGS"] = "1"
@@ -74,6 +75,10 @@ class VirtualJoystickApp(App):
         self.image_decoder = TurboJPEG()
 
         self.async_tasks: List[asyncio.Task] = []
+
+        # For testing read / write protocol
+        self.read_value = "???"
+        self.send_req_timer: None | Timer = None
 
     def build(self):
         return Builder.load_file("res/main.kv")
@@ -172,6 +177,12 @@ class VirtualJoystickApp(App):
                     self.amiga_state = AmigaControlState(amiga_tpdo1.state).name[6:]
                     self.amiga_speed = str(amiga_tpdo1.meas_speed)
                     self.amiga_rate = str(amiga_tpdo1.meas_ang_rate)
+
+                # TODO:
+                # if is a FarmngReqRep reply:
+                #   if val id matches:
+                #       update displayed value
+                #       self.send_req_timer = None
 
     async def stream_camera(self, client: OakCameraClient) -> None:
         """This task listens to the camera client's stream and populates the tabbed panel with all 4 image streams
@@ -287,7 +298,18 @@ class VirtualJoystickApp(App):
                 cmd_ang_rate=self.max_angular_rate * -joystick.joystick_pose.x,
             )
             yield canbus_pb2.SendCanbusMessageRequest(message=msg)
+            if self.send_req_timer and self.send_req_timer.check():
+                # TODO
+                pass
             await asyncio.sleep(period)
+
+    # For testing read / write protocol
+    def trigger_read_req(self):
+        self.send_req_timer = Timer(period_s=0.5)
+
+    # For testing read / write protocol
+    def val_slider_move(self):
+        self.read_value = "???"
 
 
 if __name__ == "__main__":
