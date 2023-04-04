@@ -230,6 +230,22 @@ class AmigaPdo2(Packet):
             self.format, data
         )
 
+    @classmethod
+    def make_proto(
+        cls,
+        req: bool,
+        a_rpm: int = 0,
+        b_rpm: int = 0,
+        c_rpm: int = 0,
+        d_rpm: int = 0,
+        node_id: int = DASHBOARD_NODE_ID,
+    ) -> canbus_pb2.RawCanbusMessage:
+        """Creates a canbus_pb2.RawCanbusMessage."""
+        return canbus_pb2.RawCanbusMessage(
+            id=((cls.cob_id_req if req else cls.cob_id_rep) | node_id),
+            data=cls(a_rpm=a_rpm, b_rpm=b_rpm, c_rpm=c_rpm, d_rpm=d_rpm).encode(),
+        )
+
     def __str__(self):
         return "AMIGA PDO2 Motor RPMs | A {} B {} C {} D {}".format(
             self.a_rpm, self.b_rpm, self.c_rpm, self.d_rpm

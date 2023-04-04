@@ -83,9 +83,10 @@ class VirtualJoystickApp(App):
         self.async_tasks: List[asyncio.Task] = []
 
         # For testing read / write protocol
-        # self.read_value = "???"
-        # self.read_success = "???"
         self.send_req_timer: None | Timer = None
+
+        # For individual motor control
+        self.rpm_scale: int = 1500
 
     def build(self):
         return Builder.load_file("res/main.kv")
@@ -238,12 +239,33 @@ class VirtualJoystickApp(App):
 
         joystick: VirtualJoystickWidget = self.root.ids["joystick"]
         while True:
+            # Send auto control message
             msg: canbus_pb2.RawCanbusMessage = make_amiga_rpdo1_proto(
                 state_req=AmigaControlState.STATE_AUTO_ACTIVE,
                 cmd_speed=self.max_speed * joystick.joystick_pose.y,
                 cmd_ang_rate=self.max_angular_rate * -joystick.joystick_pose.x,
             )
             yield canbus_pb2.SendCanbusMessageRequest(message=msg)
+            # Send individual motor controls
+            yield canbus_pb2.SendCanbusMessageRequest(
+                message=AmigaPdo2.make_proto(
+                    req=True,
+                    a_rpm=int(
+                        self.rpm_scale * self.root.ids["joystick_a"].joystick_pose.y
+                    ),
+                    b_rpm=int(
+                        self.rpm_scale * self.root.ids["joystick_b"].joystick_pose.y
+                    ),
+                    c_rpm=int(
+                        self.rpm_scale * self.root.ids["joystick_c"].joystick_pose.y
+                    ),
+                    d_rpm=int(
+                        self.rpm_scale * self.root.ids["joystick_d"].joystick_pose.y
+                    ),
+                )
+            )
+
+            # Query settings values
             if self.send_req_timer and self.send_req_timer.check():
                 yield canbus_pb2.SendCanbusMessageRequest(
                     message=FarmngRepReq.make_proto(
