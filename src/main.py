@@ -28,6 +28,7 @@ from farm_ng.service import service_pb2
 from farm_ng.service.service_client import ClientConfig
 from turbojpeg import TurboJPEG
 from virtual_joystick.joystick import VirtualJoystickWidget
+from virtual_joystick.utils import AmigaPdo2
 from virtual_joystick.utils import DASHBOARD_NODE_ID
 from virtual_joystick.utils import FarmngRepReq
 from virtual_joystick.utils import req_rep_val_fmt_dict
@@ -172,6 +173,13 @@ class VirtualJoystickApp(App):
                     self.amiga_state = AmigaControlState(amiga_tpdo1.state).name[6:]
                     self.amiga_speed = str(amiga_tpdo1.meas_speed)
                     self.amiga_rate = str(amiga_tpdo1.meas_ang_rate)
+
+                elif proto.id == AmigaPdo2.cob_id_rep + DASHBOARD_NODE_ID:
+                    pdo: AmigaPdo2 = AmigaPdo2.from_can_data(proto.data, proto.stamp)
+                    self.motor_a_rpm = str(pdo.a_rpm)
+                    self.motor_b_rpm = str(pdo.b_rpm)
+                    self.motor_c_rpm = str(pdo.c_rpm)
+                    self.motor_d_rpm = str(pdo.d_rpm)
 
                 elif proto.id == FarmngRepReq.cob_id_rep + DASHBOARD_NODE_ID:
                     rep: FarmngRepReq = FarmngRepReq.from_can_data(

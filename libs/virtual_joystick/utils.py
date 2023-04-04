@@ -155,6 +155,8 @@ class FarmngRepReq(Packet):
         self.success = success
         self.payload = payload
 
+        self.stamp_packet(time.monotonic())
+
     def encode(self):
         """Returns the data contained by the class encoded as CAN message data."""
         return struct.pack(
@@ -188,4 +190,47 @@ class FarmngRepReq(Packet):
             self.val_id,
             self.success,
             self.payload,
+        )
+
+
+class AmigaPdo2(Packet):
+    """Contains a request or reply of RPM for each in individual motor (0xA - 0xD).
+
+    Identical packet for RPDO (request) & TPDO (reply (measured)). Should be used in conjunction with AmigaRpdo1 /
+    AmigaTpdo1 for auto control.
+
+    Introduced in fw version v0.2.0
+    """
+
+    cob_id_req = 0x300  # RPDO2
+    cob_id_rep = 0x280  # TPDO2
+
+    def __init__(
+        self,
+        a_rpm: int = 0,
+        b_rpm: int = 0,
+        c_rpm: int = 0,
+        d_rpm: int = 0,
+    ):
+        self.format = "<4h"
+        self.a_rpm: int = a_rpm
+        self.b_rpm: int = b_rpm
+        self.c_rpm: int = c_rpm
+        self.d_rpm: int = d_rpm
+
+        self.stamp_packet(time.monotonic())
+
+    def encode(self):
+        """Returns the data contained by the class encoded as CAN message data."""
+        return struct.pack(self.format, self.a_rpm, self.b_rpm, self.c_rpm, self.d_rpm)
+
+    def decode(self, data):
+        """Decodes CAN message data and populates the values of the class."""
+        (self.a_rpm, self.b_rpm, self.c_rpm, self.d_rpm) = struct.unpack(
+            self.format, data
+        )
+
+    def __str__(self):
+        return "AMIGA PDO2 Motor RPMs | A {} B {} C {} D {}".format(
+            self.a_rpm, self.b_rpm, self.c_rpm, self.d_rpm
         )
