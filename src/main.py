@@ -30,7 +30,12 @@ from farm_ng.service import service_pb2
 from farm_ng.service.service_client import ClientConfig
 from turbojpeg import TurboJPEG
 from virtual_joystick.joystick import VirtualJoystickWidget
+from virtual_joystick.utils import DASHBOARD_NODE_ID
+from virtual_joystick.utils import FarmngRepReq
+from virtual_joystick.utils import req_rep_val_fmt_dict
+from virtual_joystick.utils import ReqRepOpIds
 from virtual_joystick.utils import Timer
+from virtual_joystick.utils import unpack_req_rep_value
 
 # Must come before kivy imports
 os.environ["KIVY_NO_ARGS"] = "1"
@@ -55,6 +60,8 @@ class VirtualJoystickApp(App):
     amiga_state = StringProperty("???")
     amiga_speed = StringProperty("???")
     amiga_rate = StringProperty("???")
+    read_value = StringProperty("???")
+    read_success = StringProperty("???")
 
     def __init__(
         self, address: str, camera_port: int, canbus_port: int, stream_every_n: int
@@ -77,7 +84,8 @@ class VirtualJoystickApp(App):
         self.async_tasks: List[asyncio.Task] = []
 
         # For testing read / write protocol
-        self.read_value = "???"
+        # self.read_value = "???"
+        # self.read_success = "???"
         self.send_req_timer: None | Timer = None
 
     def build(self):
@@ -178,11 +186,17 @@ class VirtualJoystickApp(App):
                     self.amiga_speed = str(amiga_tpdo1.meas_speed)
                     self.amiga_rate = str(amiga_tpdo1.meas_ang_rate)
 
-                # TODO:
-                # if is a FarmngReqRep reply:
-                #   if val id matches:
-                #       update displayed value
-                #       self.send_req_timer = None
+                elif proto.id == FarmngRepReq.cob_id_rep + DASHBOARD_NODE_ID:
+                    rep: FarmngRepReq = FarmngRepReq.from_can_data(
+                        proto.data, proto.stamp
+                    )
+                    if int(rep.val_id) == int(self.root.ids.read_val_sld.value):
+                        self.read_success = str(bool(rep.success))
+                        if rep.val_id in req_rep_val_fmt_dict:
+                            self.read_value = str(
+                                unpack_req_rep_value(rep.val_id, rep.payload)
+                            )
+                    self.send_req_timer = None
 
     async def stream_camera(self, client: OakCameraClient) -> None:
         """This task listens to the camera client's stream and populates the tabbed panel with all 4 image streams
@@ -204,7 +218,7 @@ class VirtualJoystickApp(App):
                 if response_stream is not None:
                     response_stream.cancel()
                     response_stream = None
-                print("Camera service is not streaming or ready to stream")
+                # print("Camera service is not streaming or ready to stream")
                 await asyncio.sleep(0.1)
                 continue
 
@@ -299,8 +313,14 @@ class VirtualJoystickApp(App):
             )
             yield canbus_pb2.SendCanbusMessageRequest(message=msg)
             if self.send_req_timer and self.send_req_timer.check():
-                # TODO
-                pass
+                yield canbus_pb2.SendCanbusMessageRequest(
+                    message=FarmngRepReq.make_proto(
+                        req=True,
+                        op_id=ReqRepOpIds.READ,
+                        val_id=int(self.root.ids.read_val_sld.value),
+                    )
+                )
+
             await asyncio.sleep(period)
 
     # For testing read / write protocol
@@ -310,6 +330,8 @@ class VirtualJoystickApp(App):
     # For testing read / write protocol
     def val_slider_move(self):
         self.read_value = "???"
+        self.read_success = "???"
+        self.send_req_timer = None
 
 
 if __name__ == "__main__":

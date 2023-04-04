@@ -11,7 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import struct
 import time
+
+from farm_ng.canbus import canbus_pb2
+from farm_ng.canbus.packet import DASHBOARD_NODE_ID
+from farm_ng.canbus.packet import Packet
 
 
 class Vec2:
@@ -34,15 +39,12 @@ class Timer:
         self.stamp = time.monotonic()
 
     def check(self) -> bool:
-        """This is the recommended method to use for checking the TickRepeater timer.
-
-        Wraps the `update()` method.
-        """
+        """Check if long enough in the timer has passed."""
         stamp = time.monotonic()
         if stamp < self.stamp + self.period_s:
             return False
-        missed_periods: int = (stamp - self.stamp) // self.period_s
-        if missed_periods:
+        missed_periods: int = int((stamp - self.stamp) // self.period_s)
+        if missed_periods > 1:
             print(f"Catching up on {missed_periods} missed periods in Timer")
         self.stamp += (missed_periods + 1) * self.period_s
         return True
@@ -50,3 +52,140 @@ class Timer:
     def reset(self):
         """Reset the timer to start from the current time."""
         self.stamp = time.monotonic()
+
+
+class ReqRepOpIds:
+    NOP = 0
+    READ = 1
+    WRITE = 2
+    STORE = 3
+
+
+class ReqRepValIds:
+    NOP = 0
+    MAX_SPEED_LEVEL = 10
+    FLIP_JOYSTICK = 11
+    MAX_TURN_RATE = 20
+    MIN_TURN_RATE = 21
+    MAX_LIN_ACC = 22
+    MAX_ANG_ACC = 23
+    M10_ON = 30
+    M11_ON = 31
+    M12_ON = 32
+    M13_ON = 33
+    M14_ON = 34
+    M15_ON = 35
+    BATT_LO = 40
+    BATT_HI = 41
+    WHEEL_TRACK = 50
+    WHEEL_BASELINE = 51
+    WHEEL_GEAR_RATIO = 52
+    WHEEL_RADIUS = 53
+    PTO_CUR_DEV = 80
+    PTO_CUR_RPM = 81
+    PTO_MIN_RPM = 82
+    PTO_MAX_RPM = 83
+    PTO_DEF_RPM = 84
+    PTO_GEAR_RATIO = 84
+    STEERING_GAMMA = 90
+
+
+class ReqRepValFmts:
+    SHORT = "<h2x"
+    USHORT = "<H2x"
+    FLOAT = "<f"
+    BOOL = "<B3x"
+
+
+req_rep_val_fmt_dict = {
+    ReqRepValIds.MAX_SPEED_LEVEL: ReqRepValFmts.USHORT,
+    ReqRepValIds.FLIP_JOYSTICK: ReqRepValFmts.BOOL,
+    ReqRepValIds.MAX_TURN_RATE: ReqRepValFmts.FLOAT,
+    ReqRepValIds.MIN_TURN_RATE: ReqRepValFmts.FLOAT,
+    # ReqRepValIds.MAX_LIN_ACC: ReqRepValFmts.FLOAT,
+    ReqRepValIds.MAX_ANG_ACC: ReqRepValFmts.FLOAT,
+    ReqRepValIds.M10_ON: ReqRepValFmts.BOOL,
+    ReqRepValIds.M11_ON: ReqRepValFmts.BOOL,
+    ReqRepValIds.M12_ON: ReqRepValFmts.BOOL,
+    ReqRepValIds.M13_ON: ReqRepValFmts.BOOL,
+    # ReqRepValIds.M14_ON: ReqRepValFmts.BOOL,
+    # ReqRepValIds.M15_ON: ReqRepValFmts.BOOL,
+    ReqRepValIds.BATT_LO: ReqRepValFmts.FLOAT,
+    ReqRepValIds.BATT_HI: ReqRepValFmts.FLOAT,
+    ReqRepValIds.WHEEL_TRACK: ReqRepValFmts.FLOAT,
+    # ReqRepValIds.WHEEL_BASELINE: ReqRepValFmts.FLOAT,
+    ReqRepValIds.WHEEL_GEAR_RATIO: ReqRepValFmts.FLOAT,
+    ReqRepValIds.WHEEL_RADIUS: ReqRepValFmts.FLOAT,
+    ReqRepValIds.PTO_CUR_DEV: ReqRepValFmts.USHORT,
+    ReqRepValIds.PTO_CUR_RPM: ReqRepValFmts.FLOAT,
+    ReqRepValIds.PTO_MIN_RPM: ReqRepValFmts.FLOAT,
+    ReqRepValIds.PTO_MAX_RPM: ReqRepValFmts.FLOAT,
+    ReqRepValIds.PTO_DEF_RPM: ReqRepValFmts.FLOAT,
+    ReqRepValIds.PTO_GEAR_RATIO: ReqRepValFmts.FLOAT,
+    ReqRepValIds.STEERING_GAMMA: ReqRepValFmts.FLOAT,
+}
+
+
+def unpack_req_rep_value(val_id: ReqRepValIds, payload: bytes):
+    assert len(payload) == 4, "FarmngRepReq payload should be 4 bytes"
+    (value,) = struct.unpack(req_rep_val_fmt_dict[val_id], payload)
+    return value
+
+
+class FarmngRepReq(Packet):
+    """Supervisor request.
+
+    farm-ng parallel to SDO protocol
+    """
+
+    cob_id_req = 0x600  # SDO command id
+    cob_id_rep = 0x580  # SDO reply id
+
+    format = "<BHx4s"
+
+    def __init__(
+        self,
+        op_id=ReqRepOpIds.NOP,
+        val_id=ReqRepValIds.NOP,
+        success=False,
+        payload=bytes(4),
+    ) -> None:
+        self.op_id = op_id
+        self.val_id = val_id
+        self.success = success
+        self.payload = payload
+
+    def encode(self):
+        """Returns the data contained by the class encoded as CAN message data."""
+        return struct.pack(
+            self.format, self.op_id | (self.success << 7), self.val_id, self.payload
+        )
+
+    def decode(self, data):
+        """Decodes CAN message data and populates the values of the class."""
+        (op_and_s, self.val_id, self.payload) = struct.unpack(self.format, data)
+        self.success = op_and_s >> 7
+        self.op_id = op_and_s & ~0x80
+
+    @classmethod
+    def make_proto(
+        cls,
+        req: bool,
+        op_id,
+        val_id,
+        node_id: int = DASHBOARD_NODE_ID,
+        payload=bytes(4),
+    ) -> canbus_pb2.RawCanbusMessage:
+        """Creates a canbus_pb2.RawCanbusMessage."""
+        return canbus_pb2.RawCanbusMessage(
+            id=((cls.cob_id_req if req else cls.cob_id_rep) | node_id),
+            data=cls(op_id=op_id, val_id=val_id, payload=payload).encode(),
+        )
+
+    def __str__(self):
+        return "supervisor req OP {} VAL {} success {} payload {}".format(
+            self.op_id,
+            self.val_id,
+            self.success,
+            self.payload,
+        )
