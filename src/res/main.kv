@@ -77,23 +77,65 @@ RelativeLayout:
                 text: "Success: " + str(app.read_success)
             Widget:
                 size_hint_y: 0.5
+        Widget:
+            size_hint_x: 0.1
         VirtualJoystickWidget:
             id: joystick
-        TabbedPanel:
-            do_default_tab: False
-            TabbedPanelItem:
-                text: "Rgb"
-                Image:
-                    id: rgb
-            TabbedPanelItem:
-                text: "Disparity"
-                Image:
-                    id: disparity
-            TabbedPanelItem:
-                text: "Left"
-                Image:
-                    id: left
-            TabbedPanelItem:
-                text: "Right"
-                Image:
-                    id: right
+        Widget:
+            size_hint_x: 0.1
+        BoxLayout:
+            orientation: 'vertical'
+            BoxLayout:
+                orientation: 'horizontal'
+                BoxLayout:
+                    orientation: 'vertical'
+                    Label:
+                        size_hint_y: 0.1
+                        text: "Motor C"
+                    Label:
+                        size_hint_y: 0.1
+                        text: "RPM: " + str(app.motor_c_rpm)
+                    VirtualJoystickWidget:
+                        joystick_diameter: 100
+                        id: joystick_c
+                Widget:
+                    size_hint_x: 0.1
+                BoxLayout:
+                    orientation: 'vertical'
+                    Label:
+                        size_hint_y: 0.1
+                        text: "Motor D"
+                    Label:
+                        size_hint_y: 0.1
+                        text: "RPM: " + str(app.motor_d_rpm)
+                    VirtualJoystickWidget:
+                        joystick_diameter: 100
+                        id: joystick_d
+            Widget:
+                size_hint_y: 0.1
+            BoxLayout:
+                orientation: 'horizontal'
+                BoxLayout:
+                    orientation: 'vertical'
+                    Label:
+                        size_hint_y: 0.1
+                        text: "Motor B"
+                    Label:
+                        size_hint_y: 0.1
+                        text: "RPM: " + str(app.motor_b_rpm)
+                    VirtualJoystickWidget:
+                        joystick_diameter: 100
+                        id: joystick_b
+                Widget:
+                    size_hint_x: 0.1
+                BoxLayout:
+                    orientation: 'vertical'
+                    Label:
+                        size_hint_y: 0.1
+                        text: "Motor A"
+                    Label:
+                        size_hint_y: 0.1
+                        text: "RPM: " + str(app.motor_a_rpm)
+                    VirtualJoystickWidget:
+                        joystick_diameter: 100
+                        id: joystick_a
