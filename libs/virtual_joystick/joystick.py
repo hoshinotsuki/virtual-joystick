@@ -57,7 +57,6 @@ class VirtualJoystickWidget(Widget):
         """
         # Check if touch is in this widget using kivy ``collide_point`` method
         if not self.collide_point(*touch.pos):
-            self.joystick_pose = Vec2()
             return
 
         self.update_joystick_pose(touch)
