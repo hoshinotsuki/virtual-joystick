@@ -287,6 +287,14 @@ class VirtualJoystickApp(App):
         self.read_success = "???"
         self.send_req_timer = None
 
+    def val_sld_dec(self):
+        self.root.ids.read_val_sld.value -= 1
+        self.val_slider_move()
+
+    def val_sld_inc(self):
+        self.root.ids.read_val_sld.value += 1
+        self.val_slider_move()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="virtual-joystick")

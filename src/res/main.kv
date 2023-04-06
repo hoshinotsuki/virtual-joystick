@@ -54,13 +54,9 @@ RelativeLayout:
             Label:
                 text: app.amiga_rate
                 font_size: 18
-            Button:
-                text: "Read value"
-                id: read_val_btn
-                font_size: 18
-                on_release: app.trigger_read_req()
+            Widget:
             Label:
-                size_hint_y: 0.5
+                size_hint_y: 0.25
                 text: "Value ID: " + str(int(read_val_sld.value))
             Slider:
                 id: read_val_sld
@@ -69,6 +65,23 @@ RelativeLayout:
                 step: 1
                 orientation: 'horizontal'
                 on_touch_move: app.val_slider_move()
+            BoxLayout:
+                orientation: "horizontal"
+                size_hint_y: 0.5
+                Widget:
+                Button:
+                    text: "-"
+                    on_release: app.val_sld_dec()
+                Button:
+                    text: "+"
+                    on_release: app.val_sld_inc()
+                Widget:
+            Button:
+                size_hint_y: 0.75
+                text: "Read value"
+                id: read_val_btn
+                font_size: 18
+                on_release: app.trigger_read_req()
             Label:
                 size_hint_y: 0.5
                 text: "Value: " + str(app.read_value)
