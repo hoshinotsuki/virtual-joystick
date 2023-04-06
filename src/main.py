@@ -287,6 +287,12 @@ class VirtualJoystickApp(App):
                 cmd_ang_rate=self.max_angular_rate * -joystick.joystick_pose.x,
             )
             yield canbus_pb2.SendCanbusMessageRequest(message=msg)
+
+            if self.root.ids.pendant_override.state == "down":
+                for id in [0x18F, 0x70F]:
+                    yield canbus_pb2.SendCanbusMessageRequest(
+                        message=canbus_pb2.RawCanbusMessage(id=id, data=bytes(8))
+                    )
             await asyncio.sleep(period)
 
 
