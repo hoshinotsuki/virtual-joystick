@@ -89,6 +89,16 @@ class ReqRepValIds:
     PTO_GEAR_RATIO = 84
     STEERING_GAMMA = 90
 
+class ReqRepValUnits:
+    # Must be on range [0,15] (4 bits)
+    # Uses the last 4 bits of the 2 bytes used for ReqRepValIds
+
+    NAN = 0 # Unitless
+    M = 1 # meters
+    MPS = 10 # m/s
+    FPM = 11 # ft / min
+    RPM = 15 # rpm
+
 
 class ReqRepValFmts:
     SHORT = "<h2x"
@@ -147,11 +157,13 @@ class FarmngRepReq(Packet):
         self,
         op_id=ReqRepOpIds.NOP,
         val_id=ReqRepValIds.NOP,
+        units=ReqRepValUnits.NAN,
         success=False,
         payload=bytes(4),
     ) -> None:
         self.op_id = op_id
         self.val_id = val_id
+        self.units = units
         self.success = success
         self.payload = payload
 
@@ -159,15 +171,17 @@ class FarmngRepReq(Packet):
 
     def encode(self):
         """Returns the data contained by the class encoded as CAN message data."""
-        return struct.pack(
-            self.format, self.op_id | (self.success << 7), self.val_id, self.payload
+        return pack(
+            self.format, self.op_id | (self.success << 7), self.val_id | (self.units << 12), self.payload
         )
 
     def decode(self, data):
         """Decodes CAN message data and populates the values of the class."""
-        (op_and_s, self.val_id, self.payload) = struct.unpack(self.format, data)
+        (op_and_s, v_and_u, self.payload) = unpack(self.format, data)
         self.success = op_and_s >> 7
         self.op_id = op_and_s & ~0x80
+        self.units = v_and_u >> 12
+        self.val_id = v_and_u & ~0xf000
 
     @classmethod
     def make_proto(
@@ -185,12 +199,14 @@ class FarmngRepReq(Packet):
         )
 
     def __str__(self):
-        return "supervisor req OP {} VAL {} success {} payload {}".format(
+        return "supervisor req OP {} VAL {} units {} success {} payload {}".format(
             self.op_id,
             self.val_id,
+            self.units,
             self.success,
             self.payload,
         )
+
 
 
 class AmigaPdo2(Packet):
