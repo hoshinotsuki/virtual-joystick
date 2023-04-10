@@ -13,6 +13,7 @@
 # limitations under the License.
 import struct
 import time
+from enum import IntEnum
 
 from farm_ng.canbus import canbus_pb2
 from farm_ng.canbus.packet import DASHBOARD_NODE_ID
@@ -61,7 +62,13 @@ class ReqRepOpIds:
     STORE = 3
 
 
-class ReqRepValIds:
+class IntEnumWrapper(IntEnum):
+    @classmethod
+    def has_value(cls, value):
+        return value in cls._value2member_map_
+
+
+class ReqRepValIds(IntEnumWrapper):
     NOP = 0
     MAX_SPEED_LEVEL = 10
     FLIP_JOYSTICK = 11
@@ -77,6 +84,8 @@ class ReqRepValIds:
     M15_ON = 35
     BATT_LO = 40
     BATT_HI = 41
+    TURTLE_V = 45
+    TURTLE_W = 46
     WHEEL_TRACK = 50
     WHEEL_BASELINE = 51
     WHEEL_GEAR_RATIO = 52
@@ -89,14 +98,23 @@ class ReqRepValIds:
     PTO_GEAR_RATIO = 84
     STEERING_GAMMA = 90
 
+    @classmethod
+    def has_value(cls, value):
+        return value in cls._value2member_map_
+
+
 class ReqRepValUnits:
     # Must be on range [0,15] (4 bits)
     # Uses the last 4 bits of the 2 bytes used for ReqRepValIds
-
-    NAN = 0 # Unitless
-    M = 1 # meters
-    MPS = 10 # m/s
-    FPM = 11 # ft / min
+    NOP = 0
+    NA = 1 # Unitless
+    M = 2 # meters
+    V = 5 # volts
+    MPS = 7 # m/s
+    # FPM = 8 # ft / min
+    MS2 = 10 # m / s^2
+    RADS2 = 11 # rad / s^2
+    RADPS = 14 # rad / s
     RPM = 15 # rpm
 
 
@@ -122,6 +140,8 @@ req_rep_val_fmt_dict = {
     # ReqRepValIds.M15_ON: ReqRepValFmts.BOOL,
     ReqRepValIds.BATT_LO: ReqRepValFmts.FLOAT,
     ReqRepValIds.BATT_HI: ReqRepValFmts.FLOAT,
+    ReqRepValIds.TURTLE_V: ReqRepValFmts.FLOAT,
+    ReqRepValIds.TURTLE_W: ReqRepValFmts.FLOAT,
     ReqRepValIds.WHEEL_TRACK: ReqRepValFmts.FLOAT,
     # ReqRepValIds.WHEEL_BASELINE: ReqRepValFmts.FLOAT,
     ReqRepValIds.WHEEL_GEAR_RATIO: ReqRepValFmts.FLOAT,
@@ -133,6 +153,36 @@ req_rep_val_fmt_dict = {
     ReqRepValIds.PTO_DEF_RPM: ReqRepValFmts.FLOAT,
     ReqRepValIds.PTO_GEAR_RATIO: ReqRepValFmts.FLOAT,
     ReqRepValIds.STEERING_GAMMA: ReqRepValFmts.FLOAT,
+}
+
+req_rep_val_units_dict = {
+    ReqRepValIds.MAX_SPEED_LEVEL: ReqRepValUnits.NA,
+    ReqRepValIds.FLIP_JOYSTICK: ReqRepValUnits.NA,
+    ReqRepValIds.MAX_TURN_RATE: ReqRepValUnits.RADPS,
+    ReqRepValIds.MIN_TURN_RATE: ReqRepValUnits.RADPS,
+    # ReqRepValIds.MAX_LIN_ACC: ReqRepValUnits.MS2,
+    ReqRepValIds.MAX_ANG_ACC: ReqRepValUnits.RADS2,
+    ReqRepValIds.M10_ON: ReqRepValUnits.NA,
+    ReqRepValIds.M11_ON: ReqRepValUnits.NA,
+    ReqRepValIds.M12_ON: ReqRepValUnits.NA,
+    ReqRepValIds.M13_ON: ReqRepValUnits.NA,
+    # ReqRepValIds.M14_ON: ReqRepValUnits.NA,
+    # ReqRepValIds.M15_ON: ReqRepValUnits.NA,
+    ReqRepValIds.BATT_LO: ReqRepValUnits.V,
+    ReqRepValIds.BATT_HI: ReqRepValUnits.V,
+    ReqRepValIds.TURTLE_V: ReqRepValUnits.MPS,
+    ReqRepValIds.TURTLE_W: ReqRepValUnits.RADPS,
+    ReqRepValIds.WHEEL_TRACK: ReqRepValUnits.M,
+    # ReqRepValIds.WHEEL_BASELINE: ReqRepValUnits.NA,
+    ReqRepValIds.WHEEL_GEAR_RATIO: ReqRepValUnits.NA,
+    ReqRepValIds.WHEEL_RADIUS: ReqRepValUnits.M,
+    ReqRepValIds.PTO_CUR_DEV: ReqRepValUnits.NA,
+    ReqRepValIds.PTO_CUR_RPM: ReqRepValUnits.RPM,
+    ReqRepValIds.PTO_MIN_RPM: ReqRepValUnits.RPM,
+    ReqRepValIds.PTO_MAX_RPM: ReqRepValUnits.RPM,
+    ReqRepValIds.PTO_DEF_RPM: ReqRepValUnits.RPM,
+    ReqRepValIds.PTO_GEAR_RATIO: ReqRepValUnits.NA,
+    ReqRepValIds.STEERING_GAMMA: ReqRepValUnits.NA,
 }
 
 
@@ -157,7 +207,7 @@ class FarmngRepReq(Packet):
         self,
         op_id=ReqRepOpIds.NOP,
         val_id=ReqRepValIds.NOP,
-        units=ReqRepValUnits.NAN,
+        units=ReqRepValUnits.NA,
         success=False,
         payload=bytes(4),
     ) -> None:
@@ -171,17 +221,20 @@ class FarmngRepReq(Packet):
 
     def encode(self):
         """Returns the data contained by the class encoded as CAN message data."""
-        return pack(
-            self.format, self.op_id | (self.success << 7), self.val_id | (self.units << 12), self.payload
+        return struct.pack(
+            self.format,
+            self.op_id | (self.success << 7),
+            self.val_id | (self.units << 12),
+            self.payload,
         )
 
     def decode(self, data):
         """Decodes CAN message data and populates the values of the class."""
-        (op_and_s, v_and_u, self.payload) = unpack(self.format, data)
+        (op_and_s, v_and_u, self.payload) = struct.unpack(self.format, data)
         self.success = op_and_s >> 7
         self.op_id = op_and_s & ~0x80
         self.units = v_and_u >> 12
-        self.val_id = v_and_u & ~0xf000
+        self.val_id = v_and_u & ~0xF000
 
     @classmethod
     def make_proto(
@@ -206,7 +259,6 @@ class FarmngRepReq(Packet):
             self.success,
             self.payload,
         )
-
 
 
 class AmigaPdo2(Packet):

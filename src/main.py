@@ -33,6 +33,8 @@ from virtual_joystick.utils import DASHBOARD_NODE_ID
 from virtual_joystick.utils import FarmngRepReq
 from virtual_joystick.utils import req_rep_val_fmt_dict
 from virtual_joystick.utils import ReqRepOpIds
+from virtual_joystick.utils import ReqRepValIds
+from virtual_joystick.utils import ReqRepValUnits
 from virtual_joystick.utils import Timer
 from virtual_joystick.utils import unpack_req_rep_value
 
@@ -58,7 +60,9 @@ class VirtualJoystickApp(App):
     amiga_state = StringProperty("???")
     amiga_speed = StringProperty("???")
     amiga_rate = StringProperty("???")
+    read_id = StringProperty("???")
     read_value = StringProperty("???")
+    read_units = StringProperty("???")
     read_success = StringProperty("???")
     motor_a_rpm = StringProperty("???")
     motor_b_rpm = StringProperty("???")
@@ -192,6 +196,11 @@ class VirtualJoystickApp(App):
                             self.read_value = str(
                                 unpack_req_rep_value(rep.val_id, rep.payload)
                             )
+                        if ReqRepValUnits.has_value(rep.units):
+                            self.read_units = ReqRepValUnits(rep.units).name
+                        else:
+                            self.read_units = "???"
+
                     self.send_req_timer = None
 
     async def send_can_msgs(self, client: CanbusClient) -> None:
@@ -283,16 +292,24 @@ class VirtualJoystickApp(App):
 
     # For testing read / write protocol
     def val_slider_move(self):
-        self.read_value = "???"
-        self.read_success = "???"
         self.send_req_timer = None
+        self.read_id = "???"
+        self.read_value = "???"
+        self.read_units = "???"
+        self.read_success = "???"
+        if ReqRepValIds.has_value(int(self.root.ids.read_val_sld.value)):
+            self.read_id = ReqRepValIds(int(self.root.ids.read_val_sld.value)).name
 
     def val_sld_dec(self):
-        self.root.ids.read_val_sld.value = max(self.root.ids.read_val_sld.min, self.root.ids.read_val_sld.value - 1)
+        self.root.ids.read_val_sld.value = max(
+            self.root.ids.read_val_sld.min, self.root.ids.read_val_sld.value - 1
+        )
         self.val_slider_move()
 
     def val_sld_inc(self):
-        self.root.ids.read_val_sld.value = min(self.root.ids.read_val_sld.max, self.root.ids.read_val_sld.value + 1)
+        self.root.ids.read_val_sld.value = min(
+            self.root.ids.read_val_sld.max, self.root.ids.read_val_sld.value + 1
+        )
         self.val_slider_move()
 
 

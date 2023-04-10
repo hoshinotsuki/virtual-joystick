@@ -58,6 +58,9 @@ RelativeLayout:
             Label:
                 size_hint_y: 0.25
                 text: "Value ID: " + str(int(read_val_sld.value))
+            Label:
+                size_hint_y: 0.5
+                text: str(app.read_id)
             Slider:
                 id: read_val_sld
                 min: 0
@@ -85,6 +88,9 @@ RelativeLayout:
             Label:
                 size_hint_y: 0.5
                 text: "Value: " + str(app.read_value)
+            Label:
+                size_hint_y: 0.5
+                text: "Units: " + str(app.read_units)
             Label:
                 size_hint_y: 0.5
                 text: "Success: " + str(app.read_success)
