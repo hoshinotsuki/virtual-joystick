@@ -152,7 +152,7 @@ class VirtualJoystickApp(App):
                 and state.value != service_pb2.ServiceState.UNAVAILABLE
             ):
                 # get the streaming object
-                response_stream = client.stream()
+                response_stream = client.stream_raw()
 
             try:
                 # try/except so app doesn't crash on killed service
@@ -288,11 +288,11 @@ class VirtualJoystickApp(App):
         self.send_req_timer = None
 
     def val_sld_dec(self):
-        self.root.ids.read_val_sld.value -= 1
+        self.root.ids.read_val_sld.value = max(self.root.ids.read_val_sld.min, self.root.ids.read_val_sld.value - 1)
         self.val_slider_move()
 
     def val_sld_inc(self):
-        self.root.ids.read_val_sld.value += 1
+        self.root.ids.read_val_sld.value = min(self.root.ids.read_val_sld.max, self.root.ids.read_val_sld.value + 1)
         self.val_slider_move()
 
 
