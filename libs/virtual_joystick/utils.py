@@ -58,8 +58,10 @@ class Timer:
 class ReqRepOpIds:
     NOP = 0
     READ = 1
-    WRITE = 2
-    STORE = 3
+    # WRITE = 2
+    # STORE = 3
+    # CHECK_MIN = 4
+    # CHECK_MAX = 5
 
 
 class IntEnumWrapper(IntEnum):
@@ -69,6 +71,8 @@ class IntEnumWrapper(IntEnum):
 
 
 class ReqRepValIds(IntEnumWrapper):
+    # Must be on range [0,2047] (11 bits)
+    # Because we steal 5 bits for encoding units
     NOP = 0
     MAX_SPEED_LEVEL = 10
     FLIP_JOYSTICK = 11
@@ -103,19 +107,19 @@ class ReqRepValIds(IntEnumWrapper):
         return value in cls._value2member_map_
 
 
-class ReqRepValUnits:
-    # Must be on range [0,15] (4 bits)
-    # Uses the last 4 bits of the 2 bytes used for ReqRepValIds
+class ReqRepValUnits(IntEnumWrapper):
+    # Must be on range [0,31] (5 bits)
+    # Uses the last 5 bits of the 2 bytes used for ReqRepValIds
     NOP = 0
-    NA = 1 # Unitless
-    M = 2 # meters
-    V = 5 # volts
-    MPS = 7 # m/s
+    NA = 1  # Unitless
+    M = 2  # meters
+    V = 5  # volts
+    MPS = 7  # m/s
     # FPM = 8 # ft / min
-    MS2 = 10 # m / s^2
-    RADS2 = 11 # rad / s^2
-    RADPS = 14 # rad / s
-    RPM = 15 # rpm
+    MS2 = 10  # m / s^2
+    RADS2 = 11  # rad / s^2
+    RADPS = 14  # rad / s
+    RPM = 15  # rpm
 
 
 class ReqRepValFmts:
@@ -224,7 +228,7 @@ class FarmngRepReq(Packet):
         return struct.pack(
             self.format,
             self.op_id | (self.success << 7),
-            self.val_id | (self.units << 12),
+            self.val_id | (self.units << 11),
             self.payload,
         )
 
@@ -233,8 +237,8 @@ class FarmngRepReq(Packet):
         (op_and_s, v_and_u, self.payload) = struct.unpack(self.format, data)
         self.success = op_and_s >> 7
         self.op_id = op_and_s & ~0x80
-        self.units = v_and_u >> 12
-        self.val_id = v_and_u & ~0xF000
+        self.units = v_and_u >> 11
+        self.val_id = v_and_u & ~0xF800
 
     @classmethod
     def make_proto(
