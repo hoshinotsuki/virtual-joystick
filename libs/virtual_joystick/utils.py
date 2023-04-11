@@ -112,14 +112,16 @@ class ReqRepValUnits(IntEnumWrapper):
     # Uses the last 5 bits of the 2 bytes used for ReqRepValIds
     NOP = 0
     NA = 1  # Unitless
-    M = 2  # meters
-    V = 5  # volts
-    MPS = 7  # m/s
-    # FPM = 8 # ft / min
-    MS2 = 10  # m / s^2
-    RADS2 = 11  # rad / s^2
-    RADPS = 14  # rad / s
-    RPM = 15  # rpm
+    M = 4  # meters
+    # FT = 5 # feet
+    # IN = 6 # inches
+    MPS = 10  # m/s
+    # FPM = 11 # ft / min
+    RADPS = 15  # rad / s
+    RPM = 16  # rpm
+    MS2 = 20  # m / s^2
+    RADS2 = 21  # rad / s^2
+    V = 25  # volts
 
 
 class ReqRepValFmts:
