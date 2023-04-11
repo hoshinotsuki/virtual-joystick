@@ -99,7 +99,7 @@ class ReqRepValIds(IntEnumWrapper):
     PTO_MIN_RPM = 82
     PTO_MAX_RPM = 83
     PTO_DEF_RPM = 84
-    PTO_GEAR_RATIO = 84
+    PTO_GEAR_RATIO = 85
     STEERING_GAMMA = 90
 
     @classmethod
