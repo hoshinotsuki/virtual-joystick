@@ -74,7 +74,7 @@ class ReqRepValIds(IntEnumWrapper):
     # Must be on range [0,2047] (11 bits)
     # Because we steal 5 bits for encoding units
     NOP = 0
-    MAX_SPEED_LEVEL = 10
+    V_MAX = 10 # NP
     FLIP_JOYSTICK = 11
     MAX_TURN_RATE = 20
     MIN_TURN_RATE = 21
@@ -132,7 +132,7 @@ class ReqRepValFmts:
 
 
 req_rep_val_fmt_dict = {
-    ReqRepValIds.MAX_SPEED_LEVEL: ReqRepValFmts.USHORT,
+    ReqRepValIds.V_MAX: ReqRepValFmts.FLOAT,
     ReqRepValIds.FLIP_JOYSTICK: ReqRepValFmts.BOOL,
     ReqRepValIds.MAX_TURN_RATE: ReqRepValFmts.FLOAT,
     ReqRepValIds.MIN_TURN_RATE: ReqRepValFmts.FLOAT,
@@ -162,7 +162,7 @@ req_rep_val_fmt_dict = {
 }
 
 req_rep_val_units_dict = {
-    ReqRepValIds.MAX_SPEED_LEVEL: ReqRepValUnits.NA,
+    ReqRepValIds.V_MAX: ReqRepValUnits.MPS,
     ReqRepValIds.FLIP_JOYSTICK: ReqRepValUnits.NA,
     ReqRepValIds.MAX_TURN_RATE: ReqRepValUnits.RADPS,
     ReqRepValIds.MIN_TURN_RATE: ReqRepValUnits.RADPS,
